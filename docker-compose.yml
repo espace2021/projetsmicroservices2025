@@ -37,7 +37,7 @@ services:
   # ============================
 
   postgres-facturation:
-    image: postgres:latest
+    image: postgres:15
     container_name: postgres-facturation
     restart: always
     environment:
