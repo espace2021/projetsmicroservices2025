@@ -13,19 +13,18 @@ import java.util.Collection;
 @Data @NoArgsConstructor @AllArgsConstructor @ToString
 public class Facture {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     private Long id;
 
     private LocalDate date;
 
-    @OneToMany(mappedBy = "facture")
+    // Ajouter cascade pour sauvegarder les lignes automatiquement
+    @OneToMany(mappedBy = "facture", cascade = CascadeType.ALL, orphanRemoval = true)
     private Collection<FactureLigne> factureligne;
 
     @Transient
     private Customer client;
 
-
     private Double remise;
     private Long clientId;
-
 }

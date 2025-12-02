@@ -3,7 +3,9 @@ package org.ms.productmicroservice.services;
 import org.ms.prodcutmicroservice.entities.Product;
 import org.ms.productmicroservice.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -22,7 +24,13 @@ public class ProductService {
     }
 
     public Product getProductById(String id) {
-        return repo.findById(id).orElse(null);
+
+        return repo.findById(id).orElseThrow(() ->
+                new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Product not found (id=" + id + ")"
+                )
+        );
     }
 
     public void deleteProduct(String id) {
