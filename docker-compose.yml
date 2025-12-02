@@ -1,0 +1,154 @@
+services:
+  # ============================
+  # MySQL
+  # ============================
+  mysql-facturation:
+    image: mysql:8.0
+    container_name: mysql-facturation
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: facturation
+      MYSQL_USER: msuser
+      MYSQL_PASSWORD: mspass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ms-net
+
+  # ============================
+  # MongoDB
+  # ============================
+  mongo-facturation:
+    image: mongo:latest
+    container_name: mongo-facturation
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - ms-net
+
+  # ============================
+  # POSTGRESQL
+  # ============================
+
+  postgres-facturation:
+    image: postgres:latest
+    container_name: postgres-facturation
+    restart: always
+    environment:
+      POSTGRES_USER: facturation
+      POSTGRES_PASSWORD: facturation123
+      POSTGRES_DB: facturationdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ms-net
+  
+
+  # ============================
+  # Eureka Server
+  # ============================
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - ms-net
+
+  # ============================
+  # Customer Service
+  # ============================
+  customer-service:
+    build: ./customer-microservice
+    container_name: customer-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-facturation:5432/facturationdb
+      - SPRING_DATASOURCE_USERNAME=facturation
+      - SPRING_DATASOURCE_PASSWORD=facturation123
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+    depends_on:
+      - postgres-facturation  
+      - eureka-server
+    restart: on-failure 
+    networks:
+      - ms-net
+
+
+  # ============================
+  # Product Service
+  # ============================
+  product-service:
+    build: ./product-microservice
+    container_name: product-service
+    ports:
+      - "8082:8082"
+    environment:
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+    depends_on:
+      - eureka-server
+    networks:
+      - ms-net
+
+  # ============================
+  # Facture Service
+  # ============================
+  facture-service:
+    build: ./factureService
+    container_name: facture-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-facturation:3306/facturation
+      SPRING_DATASOURCE_USERNAME: msuser
+      SPRING_DATASOURCE_PASSWORD: mspass
+      eureka.client.service-url.defaultZone: http://eureka-server:8761/eureka
+    depends_on:
+      - eureka-server
+      - mysql-facturation
+      - customer-service
+      - product-service
+    networks:
+      - ms-net
+
+  # ============================
+  # API Gateway
+  # ============================
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8888:8888"
+    environment:
+      - eureka.client.service-url.defaultZone=http://eureka-server:8761/eureka
+    depends_on:
+      - eureka-server
+      - customer-service
+      - product-service
+      - facture-service
+    networks:
+      - ms-net
+
+# ============================
+# Networks
+# ============================
+networks:
+  ms-net:
+    driver: bridge
+
+# ============================
+# Volumes
+# ============================
+volumes:
+  mysql_data:
+  mongo_data:
+  postgres_data:
